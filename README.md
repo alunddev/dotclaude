@@ -59,6 +59,17 @@ claude-init --dry-run   # muestra qué haría, no modifica
 claude-init --no-setup  # copia pero no corre .claude/setup.sh
 ```
 
+### Actualizar un proyecto existente
+
+Si ya hiciste `claude-init` en un proyecto y querés bajar los últimos cambios del repo:
+
+```bash
+cd ~/proyectos/mi-app
+claude-update    # equivale a: claude-init --force
+```
+
+`claude-update` clona la última versión y la reinstala sobrescribiendo lo que haya. Tus archivos `CLAUDE.local.md` y `.claude/state/` se preservan (están gitignored, no los toca).
+
 ## Qué hace `install.sh`
 
 1. Copia `.claude/`, `CLAUDE.md`, `.mcp.json` al directorio actual.
