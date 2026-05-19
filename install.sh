@@ -147,15 +147,16 @@ if [ -f "$SOURCE_DIR/.gitignore" ]; then
 fi
 echo ""
 
-# --- Permisos ejecutables ---
-say "4. Permisos de hooks"
+# --- Permisos ejecutables + state dir ---
+say "4. Permisos + state dir"
 if [ "$DRY_RUN" = "0" ]; then
   find "$TARGET_DIR/.claude/hooks" -name '*.sh' -type f -exec chmod +x {} \; 2>/dev/null
   [ -f "$TARGET_DIR/.claude/setup.sh" ]   && chmod +x "$TARGET_DIR/.claude/setup.sh"
   [ -f "$TARGET_DIR/.claude/statusline" ] && chmod +x "$TARGET_DIR/.claude/statusline"
-  ok "hooks ejecutables"
+  mkdir -p "$TARGET_DIR/.claude/state"
+  ok "hooks ejecutables + state/ creado"
 else
-  plan "chmod +x .claude/hooks/*.sh, setup.sh, statusline"
+  plan "chmod +x .claude/hooks/*.sh, setup.sh, statusline; mkdir .claude/state"
 fi
 echo ""
 
