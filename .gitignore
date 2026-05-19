@@ -1,0 +1,42 @@
+# --- Dotclaude repo: archivos que NO se suben ---
+# (este .gitignore sirve doble: para el repo dotclaude Y como template
+# para los proyectos que usan claude-init)
+
+# Infografía original — no es contenido propio
+claude_folder.jpeg
+
+# Personal Claude Code state — never commit
+.claude/settings.local.json
+.claude/state/
+.claude/pipeline/
+.claude/sessions-*.log
+CLAUDE.local.md
+.mcp.local.json
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*-credentials.json
+*-secrets.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Common build outputs
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+.output/
+__pycache__/
+*.pyc
+target/

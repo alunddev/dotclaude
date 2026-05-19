@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Statusline — appears in the bottom bar of Claude Code.
+# Output one short line: branch, dirty marker, current model, token usage hint.
+
+set -eu
+
+branch=""
+dirty=""
+if [ -d .git ]; then
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+    dirty="*"
+  fi
+fi
+
+stack=""
+[ -f package.json ]   && stack="node"
+[ -f pyproject.toml ] && stack="${stack:+$stack,}py"
+[ -f go.mod ]         && stack="${stack:+$stack,}go"
+[ -f Cargo.toml ]     && stack="${stack:+$stack,}rs"
+
+# Compose: [branch*] (stack) — keep it short
+line=""
+[ -n "$branch" ] && line="[$branch$dirty]"
+[ -n "$stack" ]  && line="$line ($stack)"
+
+echo -n "$line"

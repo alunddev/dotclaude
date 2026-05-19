@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(pwd)",
+      "Bash(echo:*)",
+      "Bash(cd:*)",
+      "Bash(mkdir:*)",
+      "Bash(touch:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(tree:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(cut:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(diff:*)",
+      "Bash(jq:*)",
+      "Bash(yq:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(pnpm:*)",
+      "Bash(yarn:*)",
+      "Bash(bun:*)",
+      "Bash(npx:*)",
+      "Bash(pnpx:*)",
+      "Bash(node:*)",
+      "Bash(tsc:*)",
+      "Bash(deno:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
+      "Bash(uv:*)",
+      "Bash(poetry:*)",
+      "Bash(pipenv:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(black:*)",
+      "Bash(go:*)",
+      "Bash(cargo:*)",
+      "Bash(rustc:*)",
+      "Bash(rustup:*)",
+      "Bash(mvn:*)",
+      "Bash(gradle:*)",
+      "Bash(./gradlew:*)",
+      "Bash(bundle:*)",
+      "Bash(rake:*)",
+      "Bash(rails:*)",
+      "Bash(composer:*)",
+      "Bash(php:*)",
+      "Bash(artisan:*)",
+      "Bash(./artisan:*)",
+      "Bash(symfony:*)",
+      "Bash(mix:*)",
+      "Bash(flutter:*)",
+      "Bash(dart:*)",
+      "Bash(swift:*)",
+      "Bash(dotnet:*)",
+      "Bash(make:*)",
+      "Bash(cmake:*)",
+      "Bash(ninja:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(podman:*)",
+      "Bash(kubectl:*)",
+      "Bash(helm:*)",
+      "Bash(kustomize:*)",
+      "Bash(terraform:*)",
+      "Bash(terragrunt:*)",
+      "Bash(pulumi:*)",
+      "Bash(ansible:*)",
+      "Bash(ansible-playbook:*)",
+      "Bash(vercel:*)",
+      "Bash(netlify:*)",
+      "Bash(flyctl:*)",
+      "Bash(railway:*)",
+      "Bash(wrangler:*)",
+      "Bash(gcloud:*)",
+      "Bash(aws:*)",
+      "Bash(az:*)",
+      "Bash(psql:*)",
+      "Bash(mysql:*)",
+      "Bash(redis-cli:*)",
+      "Bash(mongosh:*)",
+      "Bash(sqlite3:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(rsync:*)",
+      "Bash(zip:*)",
+      "Bash(unzip:*)",
+      "Bash(tar:*)",
+      "Bash(gzip:*)",
+      "Bash(brew:*)",
+      "Bash(apt:*)",
+      "Bash(snap:*)",
+      "Bash(systemctl:*)",
+      "Bash(journalctl:*)",
+      "Bash(ps:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(top:*)",
+      "Bash(htop:*)",
+      "Bash(df:*)",
+      "Bash(du:*)",
+      "Bash(free:*)",
+      "Bash(which:*)",
+      "Bash(whereis:*)",
+      "Bash(env:*)",
+      "Bash(export:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(ln:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/)",
+      "Bash(rm -rf $HOME)",
+      "Bash(sudo:*)",
+      "Bash(su:*)",
+      "Bash(sudo rm:*)",
+      "Bash(:(){ :|:& };:)",
+      "Bash(mkfs:*)",
+      "Bash(dd:*)",
+      "Bash(fdisk:*)",
+      "Bash(git push --force)",
+      "Bash(git push --force-with-lease origin main)",
+      "Bash(git push --force-with-lease origin master)",
+      "Bash(git push -f)",
+      "Bash(git push --force origin main)",
+      "Bash(git push --force origin master)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean -fd)",
+      "Bash(git clean -fdx)",
+      "Bash(git checkout -- .)",
+      "Bash(git restore --staged .)",
+      "Bash(git branch -D main)",
+      "Bash(git branch -D master)",
+      "Bash(git branch -D trunk)",
+      "Bash(* --no-verify)",
+      "Bash(* --no-verify *)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git push --no-verify*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Bash(wget * | bash)",
+      "Bash(kubectl delete namespace:*)",
+      "Bash(kubectl delete pv:*)",
+      "Bash(kubectl delete crd:*)",
+      "Bash(helm uninstall:*)",
+      "Bash(terraform destroy)",
+      "Bash(terraform destroy *)",
+      "Bash(terraform apply -auto-approve)",
+      "Bash(aws s3 rb:*)",
+      "Bash(aws ec2 terminate-instances:*)",
+      "Bash(aws rds delete:*)",
+      "Bash(aws dynamodb delete-table:*)",
+      "Bash(aws iam delete:*)",
+      "Bash(gcloud projects delete:*)",
+      "Bash(gcloud sql instances delete:*)",
+      "Bash(gcloud compute instances delete:*)",
+      "Bash(az group delete:*)",
+      "Bash(az vm delete:*)",
+      "Bash(docker system prune -a -f --volumes)",
+      "Bash(docker volume prune -f)",
+      "Bash(docker rm -f $(docker ps -aq))",
+      "Bash(psql -c DROP DATABASE:*)",
+      "Bash(mysql -e DROP DATABASE:*)",
+      "Bash(npm publish)",
+      "Bash(pnpm publish)",
+      "Bash(yarn publish)",
+      "Bash(cargo publish)",
+      "Bash(pip publish:*)",
+      "Bash(twine upload:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/SessionStart.sh"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/PreCompact.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/UserPromptSubmit.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/Stop.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/Notification.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

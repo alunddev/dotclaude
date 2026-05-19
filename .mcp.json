@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${HOME}"
+      ],
+      "description": "Read/write files outside the project workspace (~). Useful for shared notes, dotfiles, cross-project resources."
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "description": "HTTP fetcher with content extraction. Use for docs scraping, API discovery, content downloads."
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "description": "Step-by-step structured reasoning. Useful for hard architecture/debug problems."
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "${PWD}/.claude/state/local.db"
+      ],
+      "description": "Local SQLite for ad-hoc data exploration, prototyping, or persisting session notes. DB lives at .claude/state/local.db (gitignored)."
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "description": "Headless browser for E2E testing, screenshot capture, scraping JS-rendered pages."
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "description": "Knowledge-graph memory across sessions. Complements Claude Code's built-in memory with structured entities + relations."
+    }
+  }
+}
