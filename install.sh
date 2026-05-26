@@ -238,6 +238,54 @@ fi
 
 echo ""
 
+# Inserta/regenera un bloque marcado con la regla workstation→public_html en CLAUDE.local.md.
+# No pisa el resto del archivo: solo el bloque entre marcadores.
+write_workspace_rule() {
+  local ws="$1" dep="$2" file="$TARGET_DIR/CLAUDE.local.md"
+  local begin="<!-- BEGIN dotclaude:workspace-rule -->"
+  local end="<!-- END dotclaude:workspace-rule -->"
+  local block
+  block="$begin
+# Workspace y deploy — REGLA DURA (regenerado por install.sh; no editar entre marcadores)
+
+- **Trabajás SOLO dentro de \`workstation\`:** \`$ws\`
+  Todo lo que generes (código, builds, temporales) va ACÁ.
+- **Producción es \`public_html\`:** \`$dep\`
+  Es el ÚNICO lugar fuera de \`workstation\` donde se puede escribir, y SOLO para deploy.
+- **No deployes por iniciativa propia.** Sincronizar/copiar a \`public_html\` se hace
+  ÚNICAMENTE cuando se ordena explícitamente, paso a paso.
+- **Nada fuera de esos dos directorios** (ni /etc, ni otros /home, ni el resto del server).
+$end"
+  if [ -f "$file" ] && grep -qF "$begin" "$file"; then
+    local tmp; tmp="$(mktemp)"
+    awk -v b="$begin" -v e="$end" '
+      $0==b {skip=1}
+      skip!=1 {print}
+      $0==e {skip=0}
+    ' "$file" > "$tmp"
+    printf '%s\n' "$block" >> "$tmp"
+    mv "$tmp" "$file"
+  else
+    { [ -f "$file" ] && echo ""; printf '%s\n' "$block"; } >> "$file"
+  fi
+}
+
+# --- 6. Regla workstation → public_html ---
+say "6. Regla de workspace"
+if [ "$(basename "$TARGET_DIR")" = "workstation" ]; then
+  WS_DIR="$TARGET_DIR"
+  DEPLOY_DIR="$(dirname "$TARGET_DIR")/public_html"
+  if [ "$DRY_RUN" = "1" ]; then
+    plan "CLAUDE.local.md: trabajo=$WS_DIR · deploy=$DEPLOY_DIR"
+  else
+    write_workspace_rule "$WS_DIR" "$DEPLOY_DIR"
+    ok "regla escrita: workstation=$WS_DIR → public_html=$DEPLOY_DIR"
+  fi
+else
+  ok "el dir no se llama 'workstation' — sin regla de deploy"
+fi
+echo ""
+
 # --- Confinamiento root (solo si se va a arrancar con --go) ---
 # Como root, bypassPermissions está bloqueado; aplicamos harden-root antes de arrancar.
 if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ] && [ "$(id -u)" = "0" ] \
@@ -251,8 +299,8 @@ if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ] && [ "$(id -u)" = "0" ] \
   fi
 fi
 
-# --- 6. Owner de lo creado (chown -R) ---
-say "6. Owner de los archivos creados"
+# --- 7. Owner de lo creado (chown -R) ---
+say "7. Owner de los archivos creados"
 OWN_ITEMS=(.claude CLAUDE.md .mcp.json .gitignore CLAUDE.local.md)
 if [ "$DRY_RUN" = "1" ]; then
   if [ "$(id -u)" = "0" ]; then
