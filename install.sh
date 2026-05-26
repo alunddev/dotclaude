@@ -170,6 +170,10 @@ for item in "${COPY_ITEMS[@]}"; do
     ok "$item"
   fi
 done
+# Defensa: nunca dejar overrides locales que se hayan colado en un tarball viejo.
+if [ "$DRY_RUN" = "0" ]; then
+  rm -f "$TARGET_DIR/.claude/settings.local.json" "$TARGET_DIR/.mcp.local.json"
+fi
 echo ""
 
 # --- .gitignore: merge en vez de overwrite ---
