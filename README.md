@@ -99,13 +99,27 @@ Recargá `source ~/.bashrc` y usá `cig` (instala + abre claude) o `ci` (solo in
 ### Flags del installer
 
 ```bash
---force     # sobrescribe sin preguntar
---dry-run   # muestra qué haría, no modifica
---no-setup  # copia pero no corre .claude/setup.sh
---go        # tras instalar, arranca claude (combinable con los de arriba)
+--force        # sobrescribe sin preguntar
+--dry-run      # muestra qué haría, no modifica
+--no-setup     # copia pero no corre .claude/setup.sh
+--go           # tras instalar, arranca claude (combinable con los de arriba)
+--owner=USER   # chown -R de lo creado a USER (solo root)
 ```
 
 Vía curl se pasan con `bash -s --`, p.ej.: `curl -fsSL …/install.sh | bash -s -- --force --go`
+
+### Owner de los archivos creados
+
+Al correr **como root**, los archivos quedarían de `root`. El paso 6 del installer deja todo lo creado (`.claude/`, `CLAUDE.md`, `.mcp.json`, `.gitignore`, `CLAUDE.local.md`) con el dueño que elijas:
+
+- **Interactivo** (root): pregunta el owner, con default = dueño actual del directorio (p.ej. `codeinfire`). `none` no cambia nada.
+- **No interactivo** (`curl … | bash`): pasá `--owner=USER` o `DOTCLAUDE_OWNER=USER`. Sin eso, usa el dueño actual del directorio.
+- **No-root**: no puede cambiar owner; lo saltea (los archivos ya son tuyos).
+
+```bash
+curl -fsSL https://claude.codeinfire.com/install.sh | bash -s -- --owner=codeinfire --go
+# o:  DOTCLAUDE_OWNER=codeinfire curl -fsSL …/install.sh | bash -s -- --go
+```
 
 ## Publicar cambios del template (mantenedor)
 
