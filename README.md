@@ -18,73 +18,106 @@ Tamaño total: ~2.5 MB.
 
 ## Instalación en un proyecto nuevo
 
-### Opción 1 — función shell (recomendado)
+### Opción 1 — comando único, zero config (recomendado)
 
-Una sola vez, agregá esto a tu `~/.bashrc` o `~/.zshrc`:
+En cualquier server o máquina, parado en el directorio del proyecto:
 
 ```bash
-claude-init() {
-  local repo="alunddev/dotclaude"
-  local tmp; tmp=$(mktemp -d)
-  echo "📥 Clonando $repo..."
-  gh repo clone "$repo" "$tmp/dc" -- --depth 1 --quiet
-  bash "$tmp/dc/install.sh" "$@"
-  rm -rf "$tmp"
+curl -fsSL https://claude.codeinfire.com/install.sh | bash
+```
+
+`install.sh` se baja el template solo (tarball desde tu host), copia `.claude/` + `CLAUDE.md` + `.mcp.json`, mergea `.gitignore`, valida y listo. **No requiere `gh`, ni token, ni tocar `~/.bashrc`** — el repo de GitHub queda **privado**; los servers tiran del tarball publicado en tu host.
+
+Para que además **arranque Claude** al terminar:
+
+```bash
+curl -fsSL https://claude.codeinfire.com/install.sh | bash -s -- --go
+```
+
+> **No corras `claude init`** después. Ese comando interno de Claude Code
+> genera un `CLAUDE.md` nuevo y pisaría el del template. El `.claude/` ya
+> *es* la config — Claude levanta agentes, skills, comandos y hooks solo.
+
+**Actualizar un proyecto:** volvé a correr el mismo `curl … | bash`. Tus `CLAUDE.local.md` y `.claude/state/` se preservan (gitignored, no se tocan).
+
+### Opción 2 — funciones de shell (máquina de desarrollo)
+
+Si trabajás desde tu propio equipo y querés tirar **directo del repo privado de GitHub** (sin pasar por el host), agregá esto a tu `~/.bashrc` / `~/.zshrc` una sola vez:
+
+```bash
+# Baja dotclaude del repo privado vía gh (tarball, sin .git) y lo extrae.
+_dotclaude_fetch() {
+  local repo="alunddev/dotclaude" dest="$1"; mkdir -p "$dest"
+  gh api "repos/$repo/tarball/main" 2>/dev/null | tar -xz -C "$dest" --strip-components=1 \
+    || { echo "❌ No pude bajar $repo. ¿Autenticado? gh auth status"; return 1; }
+  [ -f "$dest/install.sh" ]
 }
+
+# claude-init [--force|--dry-run|--no-setup] [--go]   (--go arranca claude al terminar)
+claude-init() {
+  local tmp go=0 args=()
+  for a in "$@"; do [ "$a" = "--go" ] && go=1 || args+=("$a"); done
+  tmp=$(mktemp -d); echo "📥 Bajando dotclaude..."
+  _dotclaude_fetch "$tmp/dc" || { rm -rf "$tmp"; return 1; }
+  bash "$tmp/dc/install.sh" "${args[@]}"; local rc=$?; rm -rf "$tmp"
+  [ $rc -eq 0 ] && [ $go -eq 1 ] && command -v claude >/dev/null && { echo "🚀 Arrancando claude..."; claude; return $?; }
+  return $rc
+}
+
+claude-update() {  # re-instala la última versión sobre un proyecto existente
+  local tmp; tmp=$(mktemp -d); echo "🔄 Actualizando dotclaude..."
+  _dotclaude_fetch "$tmp/dc" || { rm -rf "$tmp"; return 1; }
+  bash "$tmp/dc/install.sh" --force; local rc=$?; rm -rf "$tmp"; return $rc
+}
+
+alias ci='claude-init'      # solo instala
+alias cig='claude-init --go' # instala + abre claude
 ```
 
-Recargá: `source ~/.bashrc`
-
-En cualquier proyecto nuevo:
-
-```bash
-cd ~/proyectos/mi-app
-claude-init
-```
-
-### Opción 2 — manual
-
-```bash
-gh repo clone alunddev/dotclaude /tmp/dc
-bash /tmp/dc/install.sh
-rm -rf /tmp/dc
-```
+Recargá `source ~/.bashrc` y usá `cig` (instala + abre claude) o `ci` (solo instala) en cualquier proyecto. `claude-update` re-instala la última versión sobre un proyecto ya inicializado. Requiere `gh` autenticado.
 
 ### Flags del installer
 
 ```bash
-claude-init             # interactivo, pregunta antes de sobrescribir
-claude-init --force     # sobrescribe sin preguntar
-claude-init --dry-run   # muestra qué haría, no modifica
-claude-init --no-setup  # copia pero no corre .claude/setup.sh
+--force     # sobrescribe sin preguntar
+--dry-run   # muestra qué haría, no modifica
+--no-setup  # copia pero no corre .claude/setup.sh
+--go        # tras instalar, arranca claude (combinable con los de arriba)
 ```
 
-### Actualizar un proyecto existente
+Vía curl se pasan con `bash -s --`, p.ej.: `curl -fsSL …/install.sh | bash -s -- --force --go`
 
-Si ya hiciste `claude-init` en un proyecto y querés bajar los últimos cambios del repo:
+## Publicar cambios del template (mantenedor)
+
+El comando `curl … | bash` sirve el tarball desde `claude.codeinfire.com`. Cuando edites el template (agents, skills, CLAUDE.md, etc.), commiteá a GitHub y **re-publicá el tarball** a tu host con `publish.sh`:
 
 ```bash
-cd ~/proyectos/mi-app
-claude-update    # equivale a: claude-init --force
+bash publish.sh                                   # solo arma ./dotclaude.tar.gz
+bash publish.sh usuario@host:/ruta/al/webroot/    # arma + sube tarball e install.sh por scp
+DEST=rsync bash publish.sh usuario@host:/ruta/    # idem con rsync
 ```
 
-`claude-update` clona la última versión y la reinstala sobrescribiendo lo que haya. Tus archivos `CLAUDE.local.md` y `.claude/state/` se preservan (están gitignored, no los toca).
+El tarball debe quedar accesible en `https://claude.codeinfire.com/dotclaude.tar.gz` e `install.sh` en `https://claude.codeinfire.com/install.sh`. La URL del tarball está fijada en `install.sh` (`DEFAULT_TARBALL_URL`); para apuntar a otro host sin editar, exportá `DOTCLAUDE_URL=...`.
 
 ## Qué hace `install.sh`
 
+0. **Bootstrap**: si no encuentra el template al lado (caso `curl | bash`), baja el tarball de `claude.codeinfire.com` a un temporal.
 1. Copia `.claude/`, `CLAUDE.md`, `.mcp.json` al directorio actual.
 2. Hace **merge** del `.gitignore` (no overwrite — si ya tenés uno, agrega solo las líneas faltantes relacionadas con `.claude/state/`, `CLAUDE.local.md`, etc).
 3. Da `+x` a los hooks y a `setup.sh`/`statusline`.
 4. Corre `.claude/setup.sh --check` para validar que todo quedó bien.
-5. Te imprime los pasos siguientes.
+5. Con `--go`, arranca `claude`; si no, te imprime los pasos siguientes.
 
 ## Requisitos
 
-- `bash`
-- `gh` CLI autenticado (para `claude-init`)
-- `git`
+En el server donde instalás (Opción 1):
+
+- `bash` + (`curl` o `wget`)
 - `python3` (lo usa `setup.sh` para validar JSON)
 - `node` + `npx` (opcional — solo para MCP servers)
+- `claude` (solo si usás `--go`)
+
+Solo para la Opción 2 (funciones de shell) o publicar: `gh` CLI autenticado.
 
 ## Estructura del repo
 
@@ -92,7 +125,8 @@ claude-update    # equivale a: claude-init --force
 dotclaude/
 ├── README.md              ← este archivo
 ├── INSTRUCCIONES.md       ← manual de uso completo
-├── install.sh             ← installer
+├── install.sh             ← installer (con bootstrap por tarball)
+├── publish.sh             ← arma/sube dotclaude.tar.gz al host
 ├── .gitignore             ← template (se mergea al usar)
 ├── CLAUDE.md              ← reglas globales (template)
 ├── .mcp.json              ← MCP servers (template)
@@ -112,9 +146,9 @@ dotclaude/
 
 ## Personalización
 
-- **Reglas globales** (compartidas entre proyectos): editar `CLAUDE.md` en este repo y volver a `claude-init` los proyectos.
+- **Reglas globales** (compartidas entre proyectos): editar `CLAUDE.md` en este repo, `bash publish.sh user@host:/ruta/`, y re-instalar los proyectos.
 - **Reglas por proyecto** (no van al repo): crear `CLAUDE.local.md` en el proyecto (ya está gitignored).
-- **Agregar agents/skills/commands custom**: editá los `.md` correspondientes en este repo, commit, push. La próxima `claude-init` los baja.
+- **Agregar agents/skills/commands custom**: editá los `.md` correspondientes en este repo, commit, push, `publish.sh`. La próxima instalación los baja.
 
 ## Documentación
 
