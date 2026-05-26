@@ -2,6 +2,26 @@
 
 Setup personal de Claude Code para desarrollo full-stack autónomo. Copia-pega-corré-listo.
 
+## Quick start
+
+Parado en el directorio del proyecto, en **cualquier** server (zero config):
+
+```bash
+curl -fsSL https://claude.codeinfire.com/install.sh | bash
+```
+
+Para instalar **y arrancar Claude** en el mismo comando:
+
+```bash
+curl -fsSL https://claude.codeinfire.com/install.sh | bash -s -- --go
+```
+
+Si vas a correr Claude **como root**, después de instalar confiná el directorio:
+
+```bash
+bash .claude/harden-root.sh
+```
+
 ## Contenido
 
 | | Cantidad | Descripción |
@@ -99,6 +119,23 @@ DEST=rsync bash publish.sh usuario@host:/ruta/    # idem con rsync
 
 El tarball debe quedar accesible en `https://claude.codeinfire.com/dotclaude.tar.gz` e `install.sh` en `https://claude.codeinfire.com/install.sh`. La URL del tarball está fijada en `install.sh` (`DEFAULT_TARBALL_URL`); para apuntar a otro host sin editar, exportá `DOTCLAUDE_URL=...`.
 
+## Correr como root (confinado)
+
+El template arranca en `bypassPermissions` (autónomo, sin confirmaciones). **Claude se niega a usar ese modo como root** por seguridad. Si necesitás correrlo como root en un server, después de instalar:
+
+```bash
+bash .claude/harden-root.sh        # o --force para sobrescribir overrides previos
+```
+
+Eso genera dos overrides **locales** (gitignored, solo en ese server):
+
+- `.claude/settings.local.json` — baja el modo a `acceptEdits` (root OK) y agrega `deny` duro sobre `/etc`, `/root`, `/var`, `/usr`, claves SSH, `sudo`/`su`, etc.
+- `CLAUDE.local.md` — regla de comportamiento dura: **no salir del directorio del proyecto** y **no deployar nada** sin orden explícita. El directorio se detecta solo (la ruta actual).
+
+Arrancá siempre desde la carpeta del proyecto para que el scope de archivos sea correcto: `cd <proyecto> && claude`.
+
+> ⚠️ Es un cinturón fuerte a nivel app, **no una jaula de SO**. La única isolación garantizada como root sería un contenedor o un usuario no-root.
+
 ## Qué hace `install.sh`
 
 0. **Bootstrap**: si no encuentra el template al lado (caso `curl | bash`), baja el tarball de `claude.codeinfire.com` a un temporal.
@@ -135,6 +172,7 @@ dotclaude/
     ├── statusline
     ├── README.md          ← doc interna
     ├── setup.sh           ← validador idempotente
+    ├── harden-root.sh     ← confina Claude para correr como root
     ├── hooks/             ← 6 hooks (5 activos)
     ├── commands/          ← 15 slash commands
     ├── skills/            ← 45 knowledge packs
