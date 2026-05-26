@@ -143,23 +143,34 @@ bash .claude/harden-root.sh        # o --force para sobrescribir overrides previ
 
 > Si instalás con `--go` **como root** y todavía no hay `settings.local.json`, el installer corre `harden-root.sh` automáticamente antes de arrancar Claude (así el comando único también sirve en root).
 
-Eso genera dos overrides **locales** (gitignored, solo en ese server):
-
-- `.claude/settings.local.json` — baja el modo a `acceptEdits` (root OK) y agrega `deny` duro sobre `/etc`, `/root`, `/var`, `/usr`, claves SSH, `sudo`/`su`, etc.
-- `CLAUDE.local.md` — regla de comportamiento dura: **no salir del directorio del proyecto** y **no deployar nada** sin orden explícita. El directorio se detecta solo (la ruta actual).
+Eso genera `.claude/settings.local.json` (gitignored, solo en ese server): baja el modo a `acceptEdits` (root OK) y agrega `deny` duro sobre `/etc`, `/root`, `/var`, `/usr`, claves SSH, `sudo`/`su`, etc.
 
 Arrancá siempre desde la carpeta del proyecto para que el scope de archivos sea correcto: `cd <proyecto> && claude`.
 
 > ⚠️ Es un cinturón fuerte a nivel app, **no una jaula de SO**. La única isolación garantizada como root sería un contenedor o un usuario no-root.
 
+## Regla de workspace: `workstation` → `public_html`
+
+Si el directorio donde instalás se llama **`workstation`**, el installer escribe automáticamente una regla en `CLAUDE.local.md` (bloque marcado, regenerable, no pisa tu contenido):
+
+```
+<dominio>/
+├── workstation/   ← Claude trabaja acá (todo lo que genera)
+└── public_html/   ← deploy de producción (hermano), SOLO bajo orden explícita
+```
+
+La regla le deja claro a Claude que: trabaja **solo** dentro de `workstation`; `public_html` (el hermano) es el **único** destino externo permitido y **solo** para deploy cuando vos lo ordenás; nada fuera de esos dos directorios. Los nombres `workstation`/`public_html` son fijos; el dominio de arriba puede ser cualquiera. Se reescribe sola en cada `install.sh`.
+
 ## Qué hace `install.sh`
 
 0. **Bootstrap**: si no encuentra el template al lado (caso `curl | bash`), baja el tarball de `claude.codeinfire.com` a un temporal.
-1. Copia `.claude/`, `CLAUDE.md`, `.mcp.json` al directorio actual.
+1. Copia `.claude/`, `CLAUDE.md`, `.mcp.json` al directorio actual (y borra overrides locales que se hayan colado).
 2. Hace **merge** del `.gitignore` (no overwrite — si ya tenés uno, agrega solo las líneas faltantes relacionadas con `.claude/state/`, `CLAUDE.local.md`, etc).
-3. Da `+x` a los hooks y a `setup.sh`/`statusline`.
+3. Da `+x` a los hooks y a `setup.sh`/`harden-root.sh`/`statusline`.
 4. Corre `.claude/setup.sh --check` para validar que todo quedó bien.
-5. Con `--go`, arranca `claude`; si no, te imprime los pasos siguientes.
+5. Si el dir se llama `workstation`, escribe la **regla de deploy** en `CLAUDE.local.md`.
+6. Define el **owner** de lo creado (`--owner=USER` / prompt como root / default = dueño del dir).
+7. Con `--go` como root, aplica `harden-root` y arranca `claude`; si no, te imprime los pasos siguientes.
 
 ## Requisitos
 
