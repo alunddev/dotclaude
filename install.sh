@@ -9,13 +9,16 @@
 #   → si no encuentra el template al lado, se baja el tarball solo (--go arranca claude).
 #
 # Flags:
-#   --force     sobrescribe sin preguntar
-#   --dry-run   muestra qué haría, no modifica nada
-#   --no-setup  copia pero no corre .claude/setup.sh
-#   --go        al terminar, arranca `claude`
+#   --force        sobrescribe sin preguntar
+#   --dry-run      muestra qué haría, no modifica nada
+#   --no-setup     copia pero no corre .claude/setup.sh
+#   --go           al terminar, arranca `claude`
+#   --owner=USER   chown -R de lo creado a USER (solo root). Default: dueño del dir.
+#                  Como root e interactivo, lo pregunta. `--owner=none` = no cambiar.
 #
-# Origen del tarball (override para self-hosting o testing):
-#   DOTCLAUDE_URL=https://mi-server/dotclaude.tar.gz curl -fsSL .../install.sh | bash
+# Entorno (override para self-hosting / automatización):
+#   DOTCLAUDE_URL=https://mi-server/dotclaude.tar.gz   origen del tarball
+#   DOTCLAUDE_OWNER=usuario                            owner sin prompt
 
 set -eu
 
@@ -43,12 +46,14 @@ FORCE=0
 DRY_RUN=0
 RUN_SETUP=1
 GO=0
+OWNER="${DOTCLAUDE_OWNER:-}"   # vacío = preguntar (root) o no cambiar (no-root)
 for arg in "$@"; do
   case "$arg" in
     --force)    FORCE=1 ;;
     --dry-run)  DRY_RUN=1 ;;
     --no-setup) RUN_SETUP=0 ;;
     --go)       GO=1 ;;
+    --owner=*)  OWNER="${arg#*=}" ;;
     -h|--help)
       sed -n '2,21p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -228,22 +233,64 @@ elif [ "$RUN_SETUP" = "0" ]; then
 fi
 
 echo ""
+
+# --- Confinamiento root (solo si se va a arrancar con --go) ---
+# Como root, bypassPermissions está bloqueado; aplicamos harden-root antes de arrancar.
+if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ] && [ "$(id -u)" = "0" ] \
+   && [ ! -f "$TARGET_DIR/.claude/settings.local.json" ]; then
+  if [ -f "$TARGET_DIR/.claude/harden-root.sh" ]; then
+    warn "root detectado — aplicando confinamiento (harden-root) antes de arrancar"
+    bash "$TARGET_DIR/.claude/harden-root.sh"
+    echo ""
+  else
+    warn "root detectado y sin harden-root.sh; claude no podrá usar bypassPermissions."
+  fi
+fi
+
+# --- 6. Owner de lo creado (chown -R) ---
+say "6. Owner de los archivos creados"
+OWN_ITEMS=(.claude CLAUDE.md .mcp.json .gitignore CLAUDE.local.md)
+if [ "$DRY_RUN" = "1" ]; then
+  if [ "$(id -u)" = "0" ]; then
+    plan "chown -R ${OWNER:-<dueño actual del dir>} de: ${OWN_ITEMS[*]}"
+  else
+    plan "no-root: sin cambio de owner"
+  fi
+elif [ "$(id -u)" = "0" ]; then
+  # Resolver OWNER: flag/env, si no prompt (default = dueño actual del dir).
+  if [ -z "$OWNER" ]; then
+    DEFAULT_OWNER="$(stat -c '%U' "$TARGET_DIR" 2>/dev/null || echo root)"
+    if [ -e /dev/tty ]; then
+      printf "  Owner para lo creado [%s] ('none' = no cambiar): " "$DEFAULT_OWNER" >/dev/tty
+      read -r OWNER </dev/tty || OWNER=""
+    fi
+    [ -z "$OWNER" ] && OWNER="$DEFAULT_OWNER"
+  fi
+  if [ "$OWNER" = "none" ]; then
+    ok "sin cambios (none)"
+  elif id "$OWNER" >/dev/null 2>&1; then
+    OWNER_GROUP="$(id -gn "$OWNER" 2>/dev/null || echo "$OWNER")"
+    for item in "${OWN_ITEMS[@]}"; do
+      [ -e "$TARGET_DIR/$item" ] && chown -R "$OWNER:$OWNER_GROUP" "$TARGET_DIR/$item"
+    done
+    ok "owner → $OWNER:$OWNER_GROUP"
+  else
+    err "owner '$OWNER' no existe — sin cambios."
+  fi
+else
+  if [ -n "$OWNER" ] && [ "$OWNER" != "none" ]; then
+    warn "owner '$OWNER' pedido pero no sos root — no se puede chown. Salteando."
+  else
+    ok "no-root: el owner ya sos vos ($(id -un))"
+  fi
+fi
+echo ""
+
 say "${G}✅ Listo${N}"
 echo ""
 
 # --- Arrancar claude si se pidió --go ---
 if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ]; then
-  # Como root, bypassPermissions está bloqueado por seguridad. Si no hay
-  # confinamiento aún, lo aplicamos (harden-root) antes de arrancar.
-  if [ "$(id -u)" = "0" ] && [ ! -f "$TARGET_DIR/.claude/settings.local.json" ]; then
-    if [ -f "$TARGET_DIR/.claude/harden-root.sh" ]; then
-      warn "root detectado — aplicando confinamiento (harden-root) antes de arrancar"
-      bash "$TARGET_DIR/.claude/harden-root.sh"
-      echo ""
-    else
-      warn "root detectado y sin harden-root.sh; claude no podrá usar bypassPermissions."
-    fi
-  fi
   if command -v claude >/dev/null 2>&1; then
     say "🚀 Arrancando claude..."
     if [ -e /dev/tty ]; then
