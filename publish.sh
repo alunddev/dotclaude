@@ -23,8 +23,17 @@ for f in "${ITEMS[@]}"; do
 done
 
 echo "📦 Armando $OUT ..."
-tar --exclude='.claude/state' -czf "$OUT" "${ITEMS[@]}"
+# NUNCA empaquetar overrides locales/per-máquina (tar ignora .gitignore, hay que excluir a mano).
+tar --exclude='.claude/state' \
+    --exclude='.claude/settings.local.json' \
+    --exclude='.mcp.local.json' \
+    --exclude='CLAUDE.local.md' \
+    --exclude='dotclaude.tar.gz' \
+    -czf "$OUT" "${ITEMS[@]}"
 echo "✓ $OUT ($(du -h "$OUT" | cut -f1))"
+if tar -tzf "$OUT" | grep -qE 'settings\.local\.json|CLAUDE\.local\.md|\.mcp\.local\.json'; then
+  echo "✗ ERROR: el tarball contiene archivos de override local. Abortando."; rm -f "$OUT"; exit 1
+fi
 
 TARGET="${1:-}"
 if [ -n "$TARGET" ]; then
