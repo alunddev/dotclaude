@@ -1,35 +1,30 @@
 #!/usr/bin/env bash
-# install.sh — copia el template dotclaude al directorio actual.
+# install.sh — instala el template dotclaude en el directorio actual.
 #
-# Uso:
-#   bash install.sh              # interactivo: confirma overwrite si hay conflictos
-#   bash install.sh --force      # sobrescribe sin preguntar
-#   bash install.sh --dry-run    # muestra qué haría sin tocar nada
-#   bash install.sh --no-setup   # copia pero no corre .claude/setup.sh
+# Uso LOCAL (con el repo clonado/extraído al lado de este script):
+#   bash install.sh [--force] [--dry-run] [--no-setup] [--go]
+#
+# Uso REMOTO (zero-config, un solo comando en cualquier server):
+#   curl -fsSL https://claude.codeinfire.com/install.sh | bash
+#   → si no encuentra el template al lado, se baja el tarball solo (--go arranca claude).
+#
+# Flags:
+#   --force     sobrescribe sin preguntar
+#   --dry-run   muestra qué haría, no modifica nada
+#   --no-setup  copia pero no corre .claude/setup.sh
+#   --go        al terminar, arranca `claude`
+#
+# Origen del tarball (override para self-hosting o testing):
+#   DOTCLAUDE_URL=https://mi-server/dotclaude.tar.gz curl -fsSL .../install.sh | bash
 
 set -eu
 
-# --- Resolución de paths ---
-# SOURCE_DIR = dónde vive este install.sh (el clone de dotclaude)
-# TARGET_DIR = dónde se corre el comando (el proyecto del usuario)
-SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
-TARGET_DIR="$(pwd)"
-
-# --- Flags ---
-FORCE=0
-DRY_RUN=0
-RUN_SETUP=1
-for arg in "$@"; do
-  case "$arg" in
-    --force)    FORCE=1 ;;
-    --dry-run)  DRY_RUN=1 ;;
-    --no-setup) RUN_SETUP=0 ;;
-    -h|--help)
-      head -10 "$0" | tail -8 | sed 's/^# //; s/^#//'
-      exit 0 ;;
-    *) echo "Unknown flag: $arg"; exit 1 ;;
-  esac
-done
+# ─── URL del tarball del template ────────────────────────────────────────────
+# El tarball debe contener EN SU RAÍZ: .claude/  CLAUDE.md  .mcp.json  .gitignore
+# (lo genera el script publish.sh de este repo). Editá DEFAULT_TARBALL_URL con
+# la URL de TU server, o pasá DOTCLAUDE_URL=... por entorno.
+DEFAULT_TARBALL_URL="https://claude.codeinfire.com/dotclaude.tar.gz"
+TARBALL_URL="${DOTCLAUDE_URL:-$DEFAULT_TARBALL_URL}"
 
 # --- Colores ---
 if [ -t 1 ]; then
@@ -37,12 +32,65 @@ if [ -t 1 ]; then
 else
   R=''; G=''; Y=''; B=''; N=''
 fi
-
 say()  { echo "${B}$*${N}"; }
 ok()   { echo "  ${G}✓${N} $*"; }
 warn() { echo "  ${Y}⚠${N} $*"; }
 err()  { echo "  ${R}✗${N} $*"; }
 plan() { echo "  ${Y}→${N} $*"; }
+
+# --- Flags ---
+FORCE=0
+DRY_RUN=0
+RUN_SETUP=1
+GO=0
+for arg in "$@"; do
+  case "$arg" in
+    --force)    FORCE=1 ;;
+    --dry-run)  DRY_RUN=1 ;;
+    --no-setup) RUN_SETUP=0 ;;
+    --go)       GO=1 ;;
+    -h|--help)
+      sed -n '2,21p' "$0" 2>/dev/null | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) echo "Unknown flag: $arg"; exit 1 ;;
+  esac
+done
+
+# --- Resolución de paths ---
+# SOURCE_DIR = de dónde se copia el template.
+# TARGET_DIR = dónde se corre el comando (el proyecto del usuario).
+TARGET_DIR="$(pwd)"
+SOURCE_DIR=""
+# $0 puede no ser un path real cuando corre vía `curl | bash`.
+if SELF="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"; then
+  [ -d "$SELF/.claude" ] && SOURCE_DIR="$SELF"
+fi
+
+# --- Bootstrap: si no hay template al lado, bajarlo del tarball ---
+BOOT_TMP=""
+if [ -z "$SOURCE_DIR" ]; then
+  if [ "$TARBALL_URL" = "https://CHANGEME/dotclaude/dotclaude.tar.gz" ]; then
+    err "No hay template al lado y TARBALL_URL no está configurada."
+    err "Editá DEFAULT_TARBALL_URL en install.sh o pasá DOTCLAUDE_URL=... por entorno."
+    exit 1
+  fi
+  BOOT_TMP="$(mktemp -d)"
+  trap 'rm -rf "$BOOT_TMP"' EXIT
+  say "📥 Bajando template: $TARBALL_URL"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$TARBALL_URL" | tar -xz -C "$BOOT_TMP"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- "$TARBALL_URL" | tar -xz -C "$BOOT_TMP"
+  else
+    err "Necesito curl o wget para bajar el template."
+    exit 1
+  fi
+  if [ ! -d "$BOOT_TMP/.claude" ]; then
+    err "El tarball no contiene .claude/ en su raíz. ¿URL correcta?"
+    exit 1
+  fi
+  SOURCE_DIR="$BOOT_TMP"
+fi
 
 # --- Sanity checks ---
 say "dotclaude installer"
@@ -81,7 +129,13 @@ done
 if [ "${#CONFLICTS[@]}" -gt 0 ] && [ "$FORCE" = "0" ]; then
   warn "Existen ya en target: ${CONFLICTS[*]}"
   if [ "$DRY_RUN" = "0" ]; then
-    read -rp "  ¿Sobrescribir? (s/N) " ans
+    # Bajo `curl | bash` stdin es el pipe del script; leemos del terminal real.
+    if [ -e /dev/tty ]; then
+      read -rp "  ¿Sobrescribir? (s/N) " ans </dev/tty
+    else
+      err "Conflictos y sin TTY para confirmar. Usá --force."
+      exit 1
+    fi
     case "${ans,,}" in
       s|si|sí|y|yes) ;;
       *) err "Cancelado."; exit 1 ;;
@@ -175,6 +229,21 @@ fi
 echo ""
 say "${G}✅ Listo${N}"
 echo ""
+
+# --- Arrancar claude si se pidió --go ---
+if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ]; then
+  if command -v claude >/dev/null 2>&1; then
+    say "🚀 Arrancando claude..."
+    if [ -e /dev/tty ]; then
+      exec claude </dev/tty
+    else
+      exec claude
+    fi
+  else
+    warn "--go pedido pero 'claude' no está instalado/en PATH."
+  fi
+fi
+
 echo "Próximos pasos:"
 echo "  1. (opcional) Editá CLAUDE.local.md con reglas específicas del proyecto"
 echo "  2. Abrí Claude Code: ${B}claude${N}"

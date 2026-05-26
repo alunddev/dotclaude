@@ -40,3 +40,6 @@ build/
 __pycache__/
 *.pyc
 target/
+
+# Build artifact de publish.sh
+dotclaude.tar.gz
