@@ -16,10 +16,10 @@ Para instalar **y arrancar Claude** en el mismo comando:
 curl -fsSL https://claude.codeinfire.com/install.sh | bash -s -- --go
 ```
 
-Si vas a correr Claude **como root**, después de instalar confiná el directorio:
+**Como root**, `bypassPermissions` está bloqueado. Con `--go`, el installer aplica el confinamiento solo antes de arrancar. Sin `--go`, confinalo a mano tras instalar:
 
 ```bash
-bash .claude/harden-root.sh
+bash .claude/harden-root.sh && claude
 ```
 
 ## Contenido
@@ -126,6 +126,8 @@ El template arranca en `bypassPermissions` (autónomo, sin confirmaciones). **Cl
 ```bash
 bash .claude/harden-root.sh        # o --force para sobrescribir overrides previos
 ```
+
+> Si instalás con `--go` **como root** y todavía no hay `settings.local.json`, el installer corre `harden-root.sh` automáticamente antes de arrancar Claude (así el comando único también sirve en root).
 
 Eso genera dos overrides **locales** (gitignored, solo en ese server):
 

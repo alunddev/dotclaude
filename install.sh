@@ -233,6 +233,17 @@ echo ""
 
 # --- Arrancar claude si se pidió --go ---
 if [ "$GO" = "1" ] && [ "$DRY_RUN" = "0" ]; then
+  # Como root, bypassPermissions está bloqueado por seguridad. Si no hay
+  # confinamiento aún, lo aplicamos (harden-root) antes de arrancar.
+  if [ "$(id -u)" = "0" ] && [ ! -f "$TARGET_DIR/.claude/settings.local.json" ]; then
+    if [ -f "$TARGET_DIR/.claude/harden-root.sh" ]; then
+      warn "root detectado — aplicando confinamiento (harden-root) antes de arrancar"
+      bash "$TARGET_DIR/.claude/harden-root.sh"
+      echo ""
+    else
+      warn "root detectado y sin harden-root.sh; claude no podrá usar bypassPermissions."
+    fi
+  fi
   if command -v claude >/dev/null 2>&1; then
     say "🚀 Arrancando claude..."
     if [ -e /dev/tty ]; then
